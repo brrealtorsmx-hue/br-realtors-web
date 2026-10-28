@@ -128,7 +128,8 @@ function renderProperties(list = []) {
   }
 }
 
-function applyLang(){document.documentElement.lang=lang;document.querySelectorAll('[data-i18n]').forEach(el=>{const key=el.dataset.i18n;if(translations[lang][key])el.innerHTML=translations[lang][key]});$('#langToggle').textContent=lang==='es'?'EN':'ES';renderProperties(filterProperties())}function filterProperties() {
+function applyLang(){document.documentElement.lang=lang;document.querySelectorAll('[data-i18n]').forEach(el=>{const key=el.dataset.i18n;if(translations[lang][key])el.innerHTML=translations[lang][key]});$('#langToggle').textContent=lang==='es'?'EN':'ES';renderProperties(filterProperties())}
+function filterProperties() {
   const properties = window.easyBrokerProperties || [];
   const op = $('#operation').value;
   const type = $('#propertyType').value;
@@ -137,28 +138,44 @@ function applyLang(){document.documentElement.lang=lang;document.querySelectorAl
   let min = 0;
   let max = Infinity;
 
-  if (range !== 'all') {
-    if (range === '40000000-plus') {
-      min = 40000000;
-    } else {
-      const parts = range.split('-').map(Number);
-      min = parts[0];
-      max = parts[1];
-    }
+  if (range === '40000000-plus') {
+    min = 40000000;
+  } else if (range !== 'all') {
+    const parts = range.split('-').map(Number);
+    min = parts[0];
+    max = parts[1];
+
+    if (max === 6000000) max = 5999999;
   }
 
   return properties.filter(p => {
-    const operation = p.operations?.[0];
-    if (!operation) return false;
+    const operations = Array.isArray(p.operations)
+      ? p.operations
+      : [];
 
-    const propertyOperation =
-      operation.type === 'rental' ? 'rent' : 'sale';
+    const matchingOperations = operations.filter(operation => {
+      const operationType = String(operation.type || '').toLowerCase();
 
-    const price = Number(operation.amount || 0);
+      if (op === 'all') return true;
+      if (op === 'sale') return operationType === 'sale';
+      if (op === 'rental') return operationType === 'rental';
 
-    const rawType = (p.property_type || '').toLowerCase();
+      return false;
+    });
+
+    if (!matchingOperations.length) return false;
+
+    const matchesPrice = matchingOperations.some(operation => {
+      const price = Number(operation.amount);
+      return price > 0 && price >= min && price <= max;
+    });
+
+    if (!matchesPrice) return false;
+
+    const rawType = String(p.property_type || '').toLowerCase();
 
     let propertyType = 'other';
+
     if (rawType.includes('casa') || rawType.includes('house')) {
       propertyType = 'house';
     } else if (
@@ -176,14 +193,10 @@ function applyLang(){document.documentElement.lang=lang;document.querySelectorAl
       propertyType = 'penthouse';
     }
 
-    return (
-      (op === 'all' || propertyOperation === op) &&
-      (type === 'all' || propertyType === type) &&
-      price >= min &&
-      price <= (range === '0-6000000' ? 5999999 : max)
-    );
+    return type === 'all' || propertyType === type;
   });
-}$('#searchForm').addEventListener('submit',e=>{e.preventDefault();renderProperties(filterProperties())});$('#langToggle').addEventListener('click',()=>{lang=lang==='es'?'en':'es';applyLang()});$('#menuToggle').addEventListener('click',()=>document.querySelector('.topbar nav').classList.toggle('open'));document.querySelectorAll('.topbar nav a').forEach(a=>a.addEventListener('click',()=>document.querySelector('.topbar nav').classList.remove('open')));$('#leadForm').addEventListener('submit',e=>{e.preventDefault();$('#formStatus').textContent=translations[lang].formDemo});$('#year').textContent=new Date().getFullYear();renderProperties();
+}
+$('#searchForm').addEventListener('submit',e=>{e.preventDefault();renderProperties(filterProperties())});$('#langToggle').addEventListener('click',()=>{lang=lang==='es'?'en':'es';applyLang()});$('#menuToggle').addEventListener('click',()=>document.querySelector('.topbar nav').classList.toggle('open'));document.querySelectorAll('.topbar nav a').forEach(a=>a.addEventListener('click',()=>document.querySelector('.topbar nav').classList.remove('open')));$('#leadForm').addEventListener('submit',e=>{e.preventDefault();$('#formStatus').textContent=translations[lang].formDemo});$('#year').textContent=new Date().getFullYear();renderProperties();
 fetch('/api/properties')
   .then(response => {
     if (!response.ok) throw new Error('No se pudo cargar EasyBroker');
