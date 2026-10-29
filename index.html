@@ -350,4 +350,21 @@ function renderSearchResults() {
 
   $('#resultCount').textContent = `${properties.length} propiedades`;
 }
-</script></body></html>
+</script>
+      <script type="module" src="https://cdn.jsdelivr.net/npm/@leadsales/leadclick@1.11.1/dist/leadclick/leadclick.esm.js"></script>
+      
+      <leadclick-widget
+        integrations="1"
+        fburl="https://www.m.me/"
+        igurl="https://www.instagram.com/leadsales.io/?hl=es"
+        waurl="https://api.whatsapp.com/send?phone=525523447725&text=Hola"
+        cta="Contáctanos"
+        fontcolor="#FFFFFF"
+        bgcolor="#5A59D5"
+        instructions="Cuál es la mejor manera para contactarte?"
+        orientation="right"
+        visible_integrations="WhatsApp,Instagram,Facebook"
+        ispremium="false"
+      >
+      </leadclick-widget>
+    </body></html>
