@@ -200,7 +200,8 @@ function filterProperties() {
 $('#searchForm').addEventListener('submit', e => {
   e.preventDefault();
 
-  const results = filterProperties();
+  renderSearchResults();
+return;
   const grid = $('#propertyGrid');
 
   if (!grid) return;
