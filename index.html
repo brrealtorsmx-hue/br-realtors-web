@@ -258,54 +258,71 @@ $('#searchForm').addEventListener('submit', e => {
   $('#resultCount').textContent = `${results.length} propiedades`;
 });
 );$('#langToggle').addEventListener('click',()=>{lang=lang==='es'?'en':'es';applyLang()});$('#menuToggle').addEventListener('click',()=>document.querySelector('.topbar nav').classList.toggle('open'));document.querySelectorAll('.topbar nav a').forEach(a=>a.addEventListener('click',()=>document.querySelector('.topbar nav').classList.remove('open')));$('#leadForm').addEventListener('submit',e=>{e.preventDefault();$('#formStatus').textContent=translations[lang].formDemo});$('#year').textContent=new Date().getFullYear();renderProperties();
+
 fetch('/api/properties')
   .then(response => {
-    if (!response.ok) throw new Error('No se pudo cargar EasyBroker');
+    if (!response.ok) {
+      throw new Error('No se pudo cargar EasyBroker');
+    }
     return response.json();
   })
   .then(data => {
-    const properties = data.content || [];
-   window.easyBrokerProperties = properties;
-    if (!properties.length) return;
-
-    const grid = document.querySelector('#propertyGrid');
-    if (!grid) return;
-
-    grid.innerHTML = '';
-
-    properties.forEach(p => {
-    const operation = p.operations?.[0] || {};
-const price = operation.formatted_amount ||
-  (operation.amount != null
-    ? '$' + Number(operation.amount).toLocaleString('es-MX') +
-      (operation.type === 'rental' ? ' MXN / mes' : ' MXN')
-    : 'Consultar precio');
-
-const image = p.title_image_full || p.title_image_thumb || '';
-const title = p.title || 'Propiedad en Bosque Real';
-const bedrooms = p.bedrooms ?? '—';
-const bathrooms = p.bathrooms ?? '—';
-const parking = p.parking_spaces ?? '—';
-const operationLabel = operation.type === 'rental' ? 'EN RENTA' : 'EN VENTA';
-
-const card = document.createElement('article');
-card.className = 'property-card';
-
-card.innerHTML = `
-  <div class="property-photo"
-       style="background-image:url('${image}')">
-    <span>${operationLabel}</span>
-  </div>
-  <div class="property-info">
-    <p class="eyebrow">BOSQUE REAL · HUIXQUILUCAN</p>
-    <h3 class="property-title">${title}</h3>
-    <p class="property-price">${price}</p>
-    <p>${bedrooms} recámaras · ${bathrooms} baños · ${parking} estacionamientos</p>
-  </div>
-`;
-
-grid.appendChild(card);
-    });
+    window.easyBrokerProperties = data.content || [];
+    renderSearchResults();
   })
-  .catch(error => console.error('Error al cargar propiedades:', error));
+  .catch(error => {
+    console.error('Error al cargar propiedades:', error);
+  });
+
+function renderSearchResults() {
+  const properties = filterProperties();
+  const grid = $('#propertyGrid');
+  if (!grid) return;
+
+  grid.innerHTML = '';
+  const t = translations[lang];
+
+  if (!properties.length) {
+    grid.innerHTML = `<div class="no-results">${t.noResults}</div>`;
+    $('#resultCount').textContent = '0 propiedades';
+    return;
+  }
+
+  properties.forEach(p => {
+    const operations = Array.isArray(p.operations) ? p.operations : [];
+    const selected = $('#operation').value;
+
+    const operation = operations.find(o =>
+      selected === 'all' ||
+      (selected === 'sale' && o.type === 'sale') ||
+      (selected === 'rental' && o.type === 'rental')
+    ) || operations[0] || {};
+
+    const price = operation.formatted_amount ||
+      (operation.amount != null
+        ? '$' + Number(operation.amount).toLocaleString('es-MX') +
+          (operation.type === 'rental' ? ' MXN / mes' : ' MXN')
+        : 'Consultar precio');
+
+    const card = document.createElement('article');
+    card.className = 'property-card';
+
+    card.innerHTML = `
+      <div class="property-photo"
+           style="background-image:url('${p.title_image_full || p.title_image_thumb || ''}')">
+        <span>${operation.type === 'rental' ? 'EN RENTA' : 'EN VENTA'}</span>
+      </div>
+      <div class="property-info">
+        <p class="eyebrow">BOSQUE REAL · HUIXQUILUCAN</p>
+        <h3 class="property-title">${p.title || 'Propiedad en Bosque Real'}</h3>
+        <p class="property-price">${price}</p>
+        <p>${p.bedrooms ?? '—'} recámaras · ${p.bathrooms ?? '—'} baños · ${p.parking_spaces ?? '—'} estacionamientos</p>
+      </div>
+    `;
+
+    grid.appendChild(card);
+  });
+
+  $('#resultCount').textContent = `${properties.length} propiedades`;
+}
 </script></body></html>
